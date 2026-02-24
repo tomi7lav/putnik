@@ -23,3 +23,4 @@ class Conversation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     tenant = relationship("Tenant", back_populates="conversations")
     contact = relationship("Contact", back_populates="conversations")
     message_events = relationship("MessageEvent", back_populates="conversation", cascade="all, delete-orphan")
+    booking = relationship("Booking", back_populates="conversation", uselist=False, cascade="all, delete-orphan")
