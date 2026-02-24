@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.schemas.whatsapp import WebhookAckResponse
+from app.services.conversation_service import conversation_service
 from app.services.message_event_service import message_event_service
 from app.services.whatsapp_service import whatsapp_service
 
@@ -42,10 +43,14 @@ async def receive_webhook(
     if await message_event_service.exists_by_idempotency_key(db, idempotency_key):
         return WebhookAckResponse(received=True)
 
+    tenant_id, conversation_id = await conversation_service.resolve_inbound_context(db, payload_json)
+
     await message_event_service.create_inbound_whatsapp_event(
         db=db,
         payload_json=payload_json,
         idempotency_key=idempotency_key,
         external_event_id=external_event_id,
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
     )
     return WebhookAckResponse(received=True)

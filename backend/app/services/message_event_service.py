@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,8 +20,12 @@ class MessageEventService:
         payload_json: dict,
         idempotency_key: str,
         external_event_id: Optional[str],
+        tenant_id: Optional[UUID] = None,
+        conversation_id: Optional[UUID] = None,
     ) -> MessageEvent:
         event = MessageEvent(
+            tenant_id=tenant_id,
+            conversation_id=conversation_id,
             provider="whatsapp",
             direction="inbound",
             event_type="webhook",
