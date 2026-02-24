@@ -118,3 +118,30 @@ async def test_same_email_allowed_across_different_tenants(client):
 
     assert first.status_code == 201
     assert second.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_auth_me_returns_current_user(client):
+    register = await client.post(
+        "/api/v1/auth/register-tenant",
+        json={
+            "tenant_name": "Me Travel",
+            "tenant_slug": "me-travel",
+            "full_name": "Current User",
+            "email": "me@travel.com",
+            "password": "supersecure123",
+        },
+    )
+    token = register.json()["access_token"]
+
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "me@travel.com"
+    assert data["role"] == "admin"
+
+
+@pytest.mark.asyncio
+async def test_auth_me_requires_token(client):
+    response = await client.get("/api/v1/auth/me")
+    assert response.status_code == 401

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from typing import Optional
-from fastapi import APIRouter, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
 from app.schemas.whatsapp import WebhookAckResponse
+from app.services.conversation_service import conversation_service
+from app.services.message_event_service import message_event_service
 from app.services.whatsapp_service import whatsapp_service
 
 router = APIRouter()
@@ -26,12 +30,27 @@ async def verify_webhook(
 async def receive_webhook(
     request: Request,
     x_hub_signature_256: Optional[str] = Header(default=None, alias="X-Hub-Signature-256"),
+    db: AsyncSession = Depends(get_db),
 ) -> WebhookAckResponse:
-    payload = await request.body()
-    if not whatsapp_service.verify_signature(payload, x_hub_signature_256):
+    raw_payload = await request.body()
+    if not whatsapp_service.verify_signature(raw_payload, x_hub_signature_256):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook signature")
 
-    # Week 1: acknowledge and keep raw payload in memory only.
-    # Week 2 will persist message events and invoke PydanticAI orchestration.
-    _ = payload
+    payload_json = whatsapp_service.parse_payload(raw_payload)
+    idempotency_key = whatsapp_service.build_idempotency_key(payload_json)
+    external_event_id = whatsapp_service.extract_external_event_id(payload_json)
+
+    if await message_event_service.exists_by_idempotency_key(db, idempotency_key):
+        return WebhookAckResponse(received=True)
+
+    tenant_id, conversation_id = await conversation_service.resolve_inbound_context(db, payload_json)
+
+    await message_event_service.create_inbound_whatsapp_event(
+        db=db,
+        payload_json=payload_json,
+        idempotency_key=idempotency_key,
+        external_event_id=external_event_id,
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+    )
     return WebhookAckResponse(received=True)
