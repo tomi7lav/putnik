@@ -18,6 +18,9 @@ get_settings.cache_clear()
 from app.core.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.base import Base  # noqa: E402
+from app.models.contact import Contact  # noqa: E402
+from app.models.conversation import Conversation  # noqa: E402
+from app.models.message_event import MessageEvent  # noqa: E402
 from app.models.tenant import Tenant  # noqa: E402
 from app.models.user import User  # noqa: E402
 
@@ -40,6 +43,9 @@ async def setup_database():
 @pytest_asyncio.fixture(autouse=True)
 async def reset_tables():
     async with TestingSessionLocal() as session:
+        await session.execute(delete(MessageEvent))
+        await session.execute(delete(Conversation))
+        await session.execute(delete(Contact))
         await session.execute(delete(User))
         await session.execute(delete(Tenant))
         await session.commit()
@@ -62,3 +68,9 @@ async def client():
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    async with TestingSessionLocal() as session:
+        yield session

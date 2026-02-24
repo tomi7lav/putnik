@@ -13,3 +13,5 @@ class Tenant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
 
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
+    contacts = relationship("Contact", back_populates="tenant", cascade="all, delete-orphan")
+    conversations = relationship("Conversation", back_populates="tenant", cascade="all, delete-orphan")

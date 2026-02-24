@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
-from app.models import tenant, user  # noqa: F401
+from app.models import contact, conversation, message_event, tenant, user  # noqa: F401
 from app.models.base import Base
 
 config = context.config

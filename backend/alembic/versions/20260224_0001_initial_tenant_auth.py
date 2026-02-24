@@ -6,6 +6,7 @@ Create Date: 2026-02-24 00:00:00.000000
 """
 
 from collections.abc import Sequence
+from typing import Optional
 
 import sqlalchemy as sa
 from alembic import op
@@ -13,9 +14,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "20260224_0001"
-down_revision: str | None = None
-branch_labels: Sequence[str] | None = None
-depends_on: Sequence[str] | None = None
+down_revision: Optional[str] = None
+branch_labels: Optional[Sequence[str]] = None
+depends_on: Optional[Sequence[str]] = None
 
 
 def upgrade() -> None:
