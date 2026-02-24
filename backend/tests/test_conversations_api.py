@@ -1,11 +1,14 @@
 from uuid import UUID
 from typing import Tuple
+import os
 
 import pytest
 from sqlalchemy import select
 
 from app.models.conversation import Conversation
 from app.models.tenant import Tenant
+
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "test-app-secret")
 
 
 def _sign(payload: bytes, secret: str) -> str:
@@ -43,7 +46,7 @@ async def test_list_conversations_returns_tenant_scoped_results(client, db_sessi
         b'"contacts":[{"wa_id":"15550000001","profile":{"name":"Alex"}}],'
         b'"messages":[{"id":"wamid-conv-a","from":"15550000001"}]}}]}]}'
     )
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
     webhook = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload,
@@ -71,7 +74,7 @@ async def test_list_conversation_events_returns_events_for_tenant_conversation(c
         b'"contacts":[{"wa_id":"15550000002","profile":{"name":"Blair"}}],'
         b'"messages":[{"id":"wamid-conv-b","from":"15550000002"}]}}]}]}'
     )
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
     webhook = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload,
@@ -108,7 +111,7 @@ async def test_list_conversation_events_is_tenant_isolated(client, db_session):
         b'"contacts":[{"wa_id":"15550000003","profile":{"name":"Casey"}}],'
         b'"messages":[{"id":"wamid-conv-c1","from":"15550000003"}]}}]}]}'
     )
-    signature_a = _sign(payload_a, "test-app-secret")
+    signature_a = _sign(payload_a, WHATSAPP_APP_SECRET)
     webhook_a = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload_a,

@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 from uuid import UUID
 
 import pytest
@@ -9,6 +10,9 @@ from app.models.contact import Contact
 from app.models.conversation import Conversation
 from app.models.message_event import MessageEvent
 from app.models.tenant import Tenant
+
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "test-app-secret")
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "test-verify-token")
 
 
 def _sign(payload: bytes, secret: str) -> str:
@@ -22,7 +26,7 @@ async def test_webhook_get_verification_success(client):
         "/api/v1/webhooks/whatsapp",
         params={
             "hub.mode": "subscribe",
-            "hub.verify_token": "test-verify-token",
+            "hub.verify_token": WHATSAPP_VERIFY_TOKEN,
             "hub.challenge": "12345",
         },
     )
@@ -49,7 +53,7 @@ async def test_webhook_get_verification_missing_challenge(client):
         "/api/v1/webhooks/whatsapp",
         params={
             "hub.mode": "subscribe",
-            "hub.verify_token": "test-verify-token",
+            "hub.verify_token": WHATSAPP_VERIFY_TOKEN,
         },
     )
     assert response.status_code == 400
@@ -58,7 +62,7 @@ async def test_webhook_get_verification_missing_challenge(client):
 @pytest.mark.asyncio
 async def test_webhook_post_valid_signature(client):
     payload = b'{"entry":[{"id":"entry-1"}]}'
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
     response = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload,
@@ -89,7 +93,7 @@ async def test_webhook_post_invalid_signature_rejected(client):
 @pytest.mark.asyncio
 async def test_webhook_post_persists_message_event(client, db_session):
     payload = b'{"entry":[{"changes":[{"value":{"messages":[{"id":"wamid-A"}]}}]}]}'
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
     response = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload,
@@ -105,7 +109,7 @@ async def test_webhook_post_persists_message_event(client, db_session):
 @pytest.mark.asyncio
 async def test_webhook_post_deduplicates_by_event_id(client, db_session):
     payload = b'{"entry":[{"changes":[{"value":{"messages":[{"id":"wamid-dup"}]}}]}]}'
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
 
     first = await client.post(
         "/api/v1/webhooks/whatsapp",
@@ -149,7 +153,7 @@ async def test_webhook_post_resolves_tenant_contact_and_conversation(client, db_
         b'"contacts":[{"wa_id":"15551234567","profile":{"name":"Alex"}}],'
         b'"messages":[{"id":"wamid-contact-1","from":"15551234567"}]}}]}]}'
     )
-    signature = _sign(payload, "test-app-secret")
+    signature = _sign(payload, WHATSAPP_APP_SECRET)
     response = await client.post(
         "/api/v1/webhooks/whatsapp",
         content=payload,
